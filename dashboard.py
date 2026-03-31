@@ -1,5 +1,5 @@
 import streamlit as st
-import yfinance as yf
+from yahooquery import Ticker # Alat baru kita
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 
@@ -7,7 +7,7 @@ from sklearn.ensemble import RandomForestClassifier
 st.set_page_config(page_title="XAUUSD AI Dashboard", layout="wide")
 
 st.title("📈 Dashboard Trading Emas (XAUUSD) v1.0")
-st.write("Sistem Prediksi Harga berbasis Machine Learning")
+st.write("Sistem Prediksi Harga berbasis Machine Learning (Jalur Stabil)")
 
 # --- SIDEBAR ---
 st.sidebar.header("⚙️ Pengaturan Robot")
@@ -18,13 +18,22 @@ risiko = st.sidebar.slider("Batas Risiko (%)", 0.5, 5.0, 2.0)
 @st.cache_data(ttl=3600)
 def ambil_data_dan_prediksi():
     try:
-        # Gunakan yfinance versi terbaru yang otomatis menangani session jika curl-cffi terpasang
-        emas = yf.Ticker("GC=F")
-        data = emas.history(period="1y")
+        # Menggunakan yahooquery sebagai pengganti yfinance
+        t = Ticker('GC=F')
+        data = t.history(period='1y')
         
-        if data.empty:
+        # Penyesuaian format data dari yahooquery ke pandas
+        if isinstance(data, pd.DataFrame) and not data.empty:
+            # Jika data berbentuk multi-index, kita rapikan
+            if 'adjclose' in data.columns:
+                data = data.rename(columns={'adjclose': 'Close'})
+            
+            # Reset index agar kolom Date bisa dibaca
+            data = data.reset_index()
+            data = data.set_index('date')
+        else:
             return None, None, None
-        
+
         # Tambah Indikator
         data['SMA_10'] = data['Close'].rolling(window=10).mean()
         data['Harga_Besok'] = data['Close'].shift(-1)
@@ -44,7 +53,6 @@ def ambil_data_dan_prediksi():
         
         return df, prediksi, harga_skrg
     except Exception as e:
-        st.error(f"Gagal menarik data: {e}")
         return None, None, None
 
 # Eksekusi
@@ -74,4 +82,4 @@ if df_tabel is not None:
     st.write("Data Tabel (5 Hari Terakhir):")
     st.dataframe(df_tabel[['Close', 'SMA_10']].tail(5))
 else:
-    st.warning("⚠️ Menunggu koneksi ke Yahoo Finance... Klik 'Rerun' di pojok kanan atas jika masih kosong.")
+    st.error("🛑 Server data sedang sibuk. Mohon tunggu 5 menit dan klik 'Rerun' di menu kanan atas.")

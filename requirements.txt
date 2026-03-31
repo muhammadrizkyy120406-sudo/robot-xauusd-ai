@@ -1,7 +1,6 @@
-yfinance
 pandas
 scikit-learn
 streamlit>=1.35.0
 matplotlib
 requests
-curl-cffi
+yahooquery
